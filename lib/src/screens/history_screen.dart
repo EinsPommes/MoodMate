@@ -5,7 +5,7 @@ import '../services/storage_service.dart';
 
 class HistoryScreen extends StatelessWidget {
   final StorageService storage;
-  
+
   const HistoryScreen({
     super.key,
     required this.storage,
@@ -13,6 +13,9 @@ class HistoryScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final colorScheme = Theme.of(context).colorScheme;
+    final textTheme = Theme.of(context).textTheme;
+
     return Scaffold(
       body: SafeArea(
         child: CustomScrollView(
@@ -23,27 +26,32 @@ class HistoryScreen extends StatelessWidget {
             FutureBuilder<List<MoodEntry>>(
               future: storage.getMoodEntries(),
               builder: (context, snapshot) {
-                if (snapshot.connectionState == ConnectionState.waiting) {
+                if (!snapshot.hasData) {
                   return const SliverFillRemaining(
-                    child: Center(child: CircularProgressIndicator()),
+                    child: Center(
+                      child: CircularProgressIndicator(),
+                    ),
                   );
                 }
 
-                if (!snapshot.hasData || snapshot.data!.isEmpty) {
-                  return const SliverFillRemaining(
+                final entries = snapshot.data!;
+                if (entries.isEmpty) {
+                  return SliverFillRemaining(
                     child: Center(
                       child: Column(
-                        mainAxisSize: MainAxisSize.min,
+                        mainAxisAlignment: MainAxisAlignment.center,
                         children: [
-                          Icon(
+                          const Icon(
                             Icons.history_outlined,
-                            size: 64,
-                            color: Colors.black26,
+                            size: 48,
+                            color: Colors.grey,
                           ),
-                          SizedBox(height: 16),
+                          const SizedBox(height: 16),
                           Text(
                             'Noch keine Einträge vorhanden',
-                            style: TextStyle(color: Colors.black45),
+                            style: textTheme.titleMedium?.copyWith(
+                              color: Colors.grey,
+                            ),
                           ),
                         ],
                       ),
@@ -51,19 +59,85 @@ class HistoryScreen extends StatelessWidget {
                   );
                 }
 
-                final entries = snapshot.data!;
+                // Gruppiere Einträge nach Datum
+                final groupedEntries = <DateTime, List<MoodEntry>>{};
+                for (final entry in entries) {
+                  final date = DateTime(
+                    entry.date.year,
+                    entry.date.month,
+                    entry.date.day,
+                  );
+                  groupedEntries.putIfAbsent(date, () => []);
+                  groupedEntries[date]!.add(entry);
+                }
+
+                final sortedDates = groupedEntries.keys.toList()
+                  ..sort((a, b) => b.compareTo(a));
+
                 return SliverPadding(
                   padding: const EdgeInsets.all(16),
                   sliver: SliverList(
                     delegate: SliverChildBuilderDelegate(
                       (context, index) {
-                        final entry = entries[index];
-                        return Padding(
-                          padding: const EdgeInsets.only(bottom: 16),
-                          child: _MoodCard(entry: entry),
+                        final date = sortedDates[index];
+                        final dayEntries = groupedEntries[date]!;
+
+                        return Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Padding(
+                              padding: const EdgeInsets.symmetric(vertical: 8),
+                              child: Text(
+                                _formatDate(date),
+                                style: textTheme.titleMedium?.copyWith(
+                                  color: colorScheme.primary,
+                                ),
+                              ),
+                            ),
+                            Card(
+                              elevation: 0,
+                              child: Column(
+                                children: [
+                                  for (final entry in dayEntries) ...[
+                                    ListTile(
+                                      leading: Container(
+                                        padding: const EdgeInsets.all(8),
+                                        decoration: BoxDecoration(
+                                          color: colorScheme.primaryContainer,
+                                          borderRadius: BorderRadius.circular(8),
+                                        ),
+                                        child: Text(
+                                          entry.emoji,
+                                          style: const TextStyle(fontSize: 20),
+                                        ),
+                                      ),
+                                      title: Text(entry.mood),
+                                      subtitle: entry.note != null
+                                          ? Text(
+                                              entry.note!,
+                                              maxLines: 2,
+                                              overflow: TextOverflow.ellipsis,
+                                            )
+                                          : null,
+                                      trailing: Text(
+                                        DateFormat.Hm().format(entry.date),
+                                        style: textTheme.bodySmall?.copyWith(
+                                          color: colorScheme.outline,
+                                        ),
+                                      ),
+                                    ),
+                                    if (entry != dayEntries.last)
+                                      const Divider(height: 1),
+                                  ],
+                                ],
+                              ),
+                            ),
+                            if (date != sortedDates.last)
+                              const SizedBox(height: 16),
+                          ],
                         );
                       },
-                      childCount: entries.length,
+                      childCount: sortedDates.length,
                     ),
                   ),
                 );
@@ -74,81 +148,18 @@ class HistoryScreen extends StatelessWidget {
       ),
     );
   }
-}
 
-class _MoodCard extends StatelessWidget {
-  final MoodEntry entry;
+  String _formatDate(DateTime date) {
+    final now = DateTime.now();
+    final today = DateTime(now.year, now.month, now.day);
+    final yesterday = today.subtract(const Duration(days: 1));
 
-  const _MoodCard({required this.entry});
-
-  @override
-  Widget build(BuildContext context) {
-    final colorScheme = Theme.of(context).colorScheme;
-    final textTheme = Theme.of(context).textTheme;
-
-    return Card(
-      child: Container(
-        decoration: BoxDecoration(
-          border: Border.all(
-            color: colorScheme.outlineVariant,
-            width: 1,
-          ),
-          borderRadius: BorderRadius.circular(16),
-        ),
-        child: Padding(
-          padding: const EdgeInsets.all(16),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Row(
-                children: [
-                  Container(
-                    padding: const EdgeInsets.all(8),
-                    decoration: BoxDecoration(
-                      color: colorScheme.primaryContainer,
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                    child: Text(
-                      entry.emoji,
-                      style: const TextStyle(fontSize: 24),
-                    ),
-                  ),
-                  const SizedBox(width: 12),
-                  Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        entry.mood,
-                        style: textTheme.titleMedium,
-                      ),
-                      Text(
-                        DateFormat('dd.MM.yyyy HH:mm').format(entry.timestamp),
-                        style: textTheme.bodySmall?.copyWith(
-                          color: colorScheme.outline,
-                        ),
-                      ),
-                    ],
-                  ),
-                ],
-              ),
-              if (entry.note != null && entry.note!.isNotEmpty) ...[
-                const SizedBox(height: 12),
-                Container(
-                  padding: const EdgeInsets.all(12),
-                  decoration: BoxDecoration(
-                    color: colorScheme.surfaceVariant,
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                  child: Text(
-                    entry.note!,
-                    style: textTheme.bodyMedium,
-                  ),
-                ),
-              ],
-            ],
-          ),
-        ),
-      ),
-    );
+    if (date == today) {
+      return 'Heute';
+    } else if (date == yesterday) {
+      return 'Gestern';
+    } else {
+      return DateFormat.yMMMMd('de').format(date);
+    }
   }
 }

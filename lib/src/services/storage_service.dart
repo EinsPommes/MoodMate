@@ -3,37 +3,45 @@ import 'package:shared_preferences/shared_preferences.dart';
 import '../models/mood_entry.dart';
 
 class StorageService {
-  static const String _key = 'mood_entries';
-  final SharedPreferences _prefs;
+  final SharedPreferences prefs;
+  static const String _entriesKey = 'mood_entries';
 
-  StorageService(this._prefs);
+  StorageService(this.prefs);
 
   // Speichere einen neuen Eintrag
   Future<void> saveMoodEntry(MoodEntry entry) async {
     final entries = await getMoodEntries();
-    entries.insert(0, entry); // Neuster Eintrag zuerst
+    entries.add(entry);
     
     final jsonList = entries.map((e) => e.toJson()).toList();
-    await _prefs.setString(_key, jsonEncode(jsonList));
+    await prefs.setString(_entriesKey, jsonEncode(jsonList));
   }
 
   // Hole alle Einträge
   Future<List<MoodEntry>> getMoodEntries() async {
-    final jsonString = _prefs.getString(_key);
-    if (jsonString == null) return [];
+    final jsonString = prefs.getString(_entriesKey);
+    if (jsonString == null || jsonString.isEmpty) {
+      return [];
+    }
 
-    final jsonList = jsonDecode(jsonString) as List;
-    return jsonList
-        .map((json) => MoodEntry.fromJson(json as Map<String, dynamic>))
-        .toList();
+    try {
+      final jsonList = jsonDecode(jsonString) as List;
+      return jsonList
+          .map((json) => MoodEntry.fromJson(json as Map<String, dynamic>))
+          .toList();
+    } catch (e) {
+      // Bei Fehler (z.B. ungültiges Format) leere Liste zurückgeben
+      await prefs.remove(_entriesKey);
+      return [];
+    }
   }
 
   // Lösche alle Einträge (für Tests)
   Future<void> clearEntries() async {
-    await _prefs.remove(_key);
+    await prefs.remove(_entriesKey);
   }
 
   Future<void> clearMoodEntries() async {
-    await _prefs.remove(_key);
+    await prefs.remove(_entriesKey);
   }
 }

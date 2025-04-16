@@ -1,6 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:package_info_plus/package_info_plus.dart';
+import 'package:provider/provider.dart';
+import '../providers/theme_provider.dart';
 import '../services/storage_service.dart';
+import '../services/notification_service.dart';
 
 class SettingsScreen extends StatelessWidget {
   final StorageService storage;
@@ -14,6 +17,8 @@ class SettingsScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     final colorScheme = Theme.of(context).colorScheme;
     final textTheme = Theme.of(context).textTheme;
+    final themeProvider = Provider.of<ThemeProvider>(context);
+    final notificationService = Provider.of<NotificationService>(context);
 
     return Scaffold(
       body: SafeArea(
@@ -38,15 +43,55 @@ class SettingsScreen extends StatelessWidget {
                       child: Column(
                         children: [
                           ListTile(
-                            leading: const Icon(Icons.dark_mode_outlined),
+                            leading: Icon(
+                              themeProvider.isDarkMode
+                                  ? Icons.dark_mode
+                                  : Icons.dark_mode_outlined,
+                            ),
                             title: const Text('Dark Mode'),
                             trailing: Switch(
-                              value: Theme.of(context).brightness == Brightness.dark,
+                              value: themeProvider.isDarkMode,
                               onChanged: (_) {
-                                // TODO: Implement dark mode toggle
+                                themeProvider.toggleTheme();
                               },
                             ),
                           ),
+                          const Divider(),
+                          ListTile(
+                            leading: const Icon(Icons.notifications_outlined),
+                            title: const Text('Tägliche Erinnerung'),
+                            trailing: Switch(
+                              value: notificationService.isReminderEnabled,
+                              onChanged: (enabled) {
+                                notificationService.toggleReminder(enabled);
+                              },
+                            ),
+                          ),
+                          if (notificationService.isReminderEnabled) ...[
+                            ListTile(
+                              leading: const Icon(Icons.access_time),
+                              title: const Text('Erinnerungszeit'),
+                              trailing: TextButton(
+                                child: Text(notificationService.reminderTime),
+                                onPressed: () async {
+                                  final time = await showTimePicker(
+                                    context: context,
+                                    initialTime: TimeOfDay.now(),
+                                  );
+                                  if (time != null) {
+                                    final dateTime = DateTime(
+                                      2024,
+                                      1,
+                                      1,
+                                      time.hour,
+                                      time.minute,
+                                    );
+                                    notificationService.setReminderTime(dateTime);
+                                  }
+                                },
+                              ),
+                            ),
+                          ],
                           const Divider(),
                           ListTile(
                             leading: Icon(

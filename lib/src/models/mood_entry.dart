@@ -1,33 +1,33 @@
 class MoodEntry {
-  final String emoji;
   final String mood;
+  final String emoji;
   final String? note;
-  final DateTime timestamp;
+  final DateTime date;
 
   MoodEntry({
-    required this.emoji,
     required this.mood,
+    required this.emoji,
     this.note,
-    DateTime? timestamp,
-  }) : timestamp = timestamp ?? DateTime.now();
+    required this.date,
+  });
 
   // Konvertiere zu Map für SharedPreferences
   Map<String, dynamic> toJson() {
     return {
-      'emoji': emoji,
       'mood': mood,
+      'emoji': emoji,
       'note': note,
-      'timestamp': timestamp.toIso8601String(),
+      'date': date.toIso8601String(),
     };
   }
 
   // Erstelle MoodEntry aus Map
   factory MoodEntry.fromJson(Map<String, dynamic> json) {
     return MoodEntry(
-      emoji: json['emoji'] as String,
       mood: json['mood'] as String,
+      emoji: json['emoji'] as String,
       note: json['note'] as String?,
-      timestamp: DateTime.parse(json['timestamp'] as String),
+      date: DateTime.parse(json['date'] as String),
     );
   }
 }

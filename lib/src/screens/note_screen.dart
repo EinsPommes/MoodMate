@@ -3,7 +3,7 @@ import '../models/mood_entry.dart';
 import '../services/storage_service.dart';
 import 'thank_you_screen.dart';
 
-class NoteScreen extends StatelessWidget {
+class NoteScreen extends StatefulWidget {
   final StorageService storage;
   final String mood;
   final String emoji;
@@ -16,89 +16,76 @@ class NoteScreen extends StatelessWidget {
   });
 
   @override
+  State<NoteScreen> createState() => _NoteScreenState();
+}
+
+class _NoteScreenState extends State<NoteScreen> {
+  final _controller = TextEditingController();
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  void _onSave() async {
+    final entry = MoodEntry(
+      mood: widget.mood,
+      emoji: widget.emoji,
+      note: _controller.text.isEmpty ? null : _controller.text,
+      date: DateTime.now(),
+    );
+
+    await widget.storage.saveMoodEntry(entry);
+
+    if (!mounted) return;
+
+    Navigator.of(context).pushReplacement(
+      MaterialPageRoute(
+        builder: (context) => ThankYouScreen(
+          mood: widget.mood,
+          emoji: widget.emoji,
+        ),
+      ),
+    );
+  }
+
+  @override
   Widget build(BuildContext context) {
-    final noteController = TextEditingController();
     final colorScheme = Theme.of(context).colorScheme;
 
     return Scaffold(
-      body: SafeArea(
-        child: CustomScrollView(
-          slivers: [
-            SliverAppBar.large(
-              title: Row(
-                children: [
-                  Container(
-                    padding: const EdgeInsets.all(8),
-                    decoration: BoxDecoration(
-                      color: colorScheme.primaryContainer,
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                    child: Text(
-                      emoji,
-                      style: const TextStyle(fontSize: 24),
-                    ),
-                  ),
-                  const SizedBox(width: 12),
-                  Text(mood),
-                ],
-              ),
-            ),
-            SliverToBoxAdapter(
+      appBar: AppBar(
+        title: const Text('Notiz hinzufügen'),
+      ),
+      body: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Card(
+              elevation: 0,
               child: Padding(
                 padding: const EdgeInsets.all(16),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.stretch,
-                  children: [
-                    Container(
-                      decoration: BoxDecoration(
-                        border: Border.all(
-                          color: colorScheme.outlineVariant,
-                          width: 1,
-                        ),
-                        borderRadius: BorderRadius.circular(16),
-                      ),
-                      child: TextField(
-                        controller: noteController,
-                        maxLines: 6,
-                        decoration: InputDecoration(
-                          hintText: 'Möchtest du etwas dazu sagen?',
-                          border: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(16),
-                            borderSide: BorderSide.none,
-                          ),
-                          filled: true,
-                          fillColor: colorScheme.surface,
-                        ),
-                      ),
+                child: TextField(
+                  controller: _controller,
+                  maxLines: 5,
+                  decoration: InputDecoration(
+                    hintText: 'Möchtest du noch etwas zu deiner Stimmung notieren?',
+                    border: InputBorder.none,
+                    hintStyle: TextStyle(
+                      color: colorScheme.outline,
                     ),
-                    const SizedBox(height: 24),
-                    FilledButton.icon(
-                      onPressed: () async {
-                        final entry = MoodEntry(
-                          emoji: emoji,
-                          mood: mood,
-                          note: noteController.text.trim(),
-                        );
-                        await storage.saveMoodEntry(entry);
-
-                        if (context.mounted) {
-                          Navigator.of(context).pushReplacement(
-                            MaterialPageRoute(
-                              builder: (context) => const ThankYouScreen(),
-                            ),
-                          );
-                        }
-                      },
-                      icon: const Icon(Icons.save_outlined),
-                      label: const Text('Speichern'),
-                      style: FilledButton.styleFrom(
-                        padding: const EdgeInsets.all(16),
-                      ),
-                    ),
-                  ],
+                  ),
                 ),
               ),
             ),
+            const Spacer(),
+            FilledButton(
+              onPressed: _onSave,
+              child: const Text('Speichern'),
+            ),
+            const SizedBox(height: 16),
           ],
         ),
       ),

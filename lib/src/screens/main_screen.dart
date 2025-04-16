@@ -3,6 +3,7 @@ import '../services/storage_service.dart';
 import 'home_screen.dart';
 import 'history_screen.dart';
 import 'settings_screen.dart';
+import 'stats_screen.dart';
 
 class MainScreen extends StatefulWidget {
   final StorageService storage;
@@ -26,6 +27,7 @@ class _MainScreenState extends State<MainScreen> {
         index: _selectedIndex,
         children: [
           HomeScreen(storage: widget.storage),
+          StatsScreen(storage: widget.storage),
           HistoryScreen(storage: widget.storage),
           SettingsScreen(storage: widget.storage),
         ],
@@ -42,6 +44,11 @@ class _MainScreenState extends State<MainScreen> {
             icon: Icon(Icons.home_outlined),
             selectedIcon: Icon(Icons.home),
             label: 'Home',
+          ),
+          NavigationDestination(
+            icon: Icon(Icons.analytics_outlined),
+            selectedIcon: Icon(Icons.analytics),
+            label: 'Statistik',
           ),
           NavigationDestination(
             icon: Icon(Icons.history_outlined),
